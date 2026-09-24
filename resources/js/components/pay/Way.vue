@@ -39,6 +39,7 @@ export default {
             phone_number: (state) => state.phone_number,
             phone: (state) => state.phone,
             pay_id: (state) => state.pay_id,
+            route: (state) => state.route,
         }),
         disabled() {
             let b = true;
@@ -51,10 +52,10 @@ export default {
     mounted() {
 
         // success 
-        window.addEventListener("message", function () {
+        window.addEventListener("message", (event) => {
             if (event.data == 'WfpWidgetEventApproved') {
                 console.log('success payment');
-                location.href = '/atmosphera/success';
+                location.href = `/${this.route}/success`;
             }
         }, false);
 
@@ -108,4 +109,3 @@ export default {
     }
 }
 </script>
-

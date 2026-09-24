@@ -23,7 +23,7 @@ class WayPayController extends Controller
         $last_name = $request->last_name;
 
         $key = env('API_KEY');
-        $url_api = env('API_URL');
+        $url_api = rtrim(config('app.api_url'), '/') . '/';
 
         Log::info('Way pay_id',['pay_id' => $pay_id,]);
         $url = $url_api . 'api/getWay';
@@ -46,8 +46,19 @@ class WayPayController extends Controller
             $orders=$datas->get('orders');
 
             $orders_datas=[ new Product('test', 0.01, 1)];
+            $account = $datas->get('account');
+            $secret = $datas->get('secret');
+            if (!$account || !$secret) {
+                Log::warning('WayForPay credentials are not configured', ['route' => $route]);
+                return response()->json($res);
+            }
+
             //$credential = new AccountSecretTestCredential();
-            $credential = new AccountSecretCredential('c_bb_crm_com', '14765279d6972f5bd61b3caa324fc791435b51a7');
+            $credential = new AccountSecretCredential($account, $secret);
+            $callback = $route === 'utc' ? 'way_callback_utc' : 'way_callback_atmosphera';
+            $returnUrl = $route === 'utc'
+                ? route('utc.payment.success')
+                : 'https://p.bb-crm.com/way_success_atmosphera';
             $datas = PurchaseWizard::get($credential)
                 ->setOrderReference($datas->get('order_id'))
                 ->setAmount($amout)
@@ -62,8 +73,8 @@ class WayPayController extends Controller
                 'UA'
                 ))
                 ->setProducts(new ProductCollection($orders_datas))
-                ->setReturnUrl('https://p.bb-crm.com/way_success_atmosphera')
-                ->setServiceUrl('https://p.bb-crm.com/way_callback_atmosphera')
+                ->setReturnUrl($returnUrl)
+                ->setServiceUrl(rtrim($url_api, '/') . '/' . $callback)
                 ->getForm()
                 ->getData();
             $datas = array_filter($datas);

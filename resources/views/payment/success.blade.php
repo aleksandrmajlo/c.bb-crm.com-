@@ -62,7 +62,7 @@
     <img src="{{ asset('images/pay-success.png') }}" alt="Успішно">
     <h1>Оплата пройшла успішно!</h1>
     <p>Дякуємо за вашу оплату. Квитанцію буде надіслано на вашу електронну пошту.</p>
-    <a href="{{ url('/atmosphera') }}" class="btn-home">На головну</a>
+    <a href="{{ $returnUrl ?? url('/atmosphera') }}" class="btn-home">На головну</a>
 </div>
 </body>
 </html>

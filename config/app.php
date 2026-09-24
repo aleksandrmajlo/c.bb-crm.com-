@@ -125,4 +125,6 @@ return [
 
     'api_key' => env('API_KEY', 'default_api_key'),
 
+    'api_url' => env('API_URL', 'https://p.bb-crm.com/'),
+
 ];

@@ -7,6 +7,11 @@ use Illuminate\Support\Facades\Http;
 
 class ApiController extends Controller
 {
+    private function apiUrl(string $path): string
+    {
+        return rtrim(config('app.api_url'), '/') . '/' . ltrim($path, '/');
+    }
+
     public function getSettingsClub(Request $request)
     {
         $route = $request->route;
@@ -14,7 +19,7 @@ class ApiController extends Controller
         $response = Http::withHeaders([
             'API-Key' => $api_key,
             'Accept' => 'application/json'
-        ])->get('https://p.bb-crm.com/api/getSettingsClub', [
+        ])->get($this->apiUrl('api/getSettingsClub'), [
             'route' => $route,
         ]);
         $res = $response->json();
@@ -28,7 +33,7 @@ class ApiController extends Controller
         $response = Http::withHeaders([
             'API-Key' => $api_key,
             'Accept' => 'application/json'
-        ])->get('https://p.bb-crm.com/api/getTablesBookings', [
+        ])->get($this->apiUrl('api/getTablesBookings'), [
             'route' => $route,
             'date_booking'=>$request->date_booking
         ]);
@@ -43,7 +48,7 @@ class ApiController extends Controller
         $response = Http::withHeaders([
             'API-Key' => $api_key,
             'Accept' => 'application/json'
-        ])->get('https://p.bb-crm.com/api/getBokingsDops', [
+        ])->get($this->apiUrl('api/getBokingsDops'), [
             'route' => $route,
             'date_booking' => $request->date_booking,
             'table_dop_id' => $request->table_dop_id,
@@ -58,7 +63,7 @@ class ApiController extends Controller
         $response = Http::withHeaders([
             'API-Key' => $api_key,
             'Accept' => 'application/json'
-        ])->post('https://p.bb-crm.com/api/getTotalBookings', [
+        ])->post($this->apiUrl('api/getTotalBookings'), [
             'route' => $route,
             'orders' => $request->orders,
         ]);
@@ -73,7 +78,7 @@ class ApiController extends Controller
         $response = Http::withHeaders([
             'API-Key' => $api_key,
             'Accept' => 'application/json'
-        ])->post('https://p.bb-crm.com/api/addBooking', [
+        ])->post($this->apiUrl('api/addBooking'), [
             'route' => $route,
             'orders' => $request->orders,
             'phone'=>$request->phone,
@@ -88,7 +93,7 @@ class ApiController extends Controller
         $response = Http::withHeaders([
             'API-Key' => $api_key,
             'Accept' => 'application/json'
-        ])->post('https://p.bb-crm.com/api/payBooking', [
+        ])->post($this->apiUrl('api/payBooking'), [
             'route' => $route,
             'orders' => $request->orders,
             'phone'=>$request->phone,
@@ -104,7 +109,7 @@ class ApiController extends Controller
         $response = Http::withHeaders([
             'API-Key' => $api_key,
             'Accept' => 'application/json'
-        ])->get('https://p.bb-crm.com/api/bookings', [
+        ])->get($this->apiUrl('api/bookings'), [
             'route' => $route,
             'phone'=>$request->phone,
         ]);
@@ -118,7 +123,7 @@ class ApiController extends Controller
         $response = Http::withHeaders([
             'API-Key' => $api_key,
             'Accept' => 'application/json'
-        ])->post('https://p.bb-crm.com/api/removeBooking', [
+        ])->post($this->apiUrl('api/removeBooking'), [
             'route' => $route,
             'phone'=>$request->phone,
             'booking_id'=>$request->booking_id,
@@ -138,7 +143,7 @@ class ApiController extends Controller
         $response = Http::withHeaders([
             'API-Key' => $api_key,
             'Accept' => 'application/json'
-        ])->post('https://p.bb-crm.com/api/updateClearOrder', [
+        ])->post($this->apiUrl('api/updateClearOrder'), [
             'route' => $route,
             'phone'=>$request->phone,
             /*
@@ -157,7 +162,7 @@ class ApiController extends Controller
         $response = Http::withHeaders([
             'API-Key' => $api_key,
             'Accept' => 'application/json'
-        ])->post('https://p.bb-crm.com/api/getCheck', [
+        ])->post($this->apiUrl('api/getCheck'), [
             'route' => $route,
             'pay_id'=>$request->pay_id,
             /*
