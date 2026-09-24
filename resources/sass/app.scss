@@ -479,6 +479,46 @@ button:disabled {
     }
 }
 
+// The schedule can contain many courts. Keep scrolling on this component
+// instead of allowing the generic Swiper styles to clip the table.
+.schedule-scroll {
+    width: 100%;
+    max-width: 100%;
+    max-height: clamp(260px, calc(100vh - 370px), 600px);
+    overflow: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: auto !important;
+    scrollbar-color: #6e7270 #f1f1f1;
+
+    > .parent-th {
+        width: max-content;
+        min-width: 100%;
+    }
+
+    &::-webkit-scrollbar {
+        display: block !important;
+        width: 12px !important;
+        height: 12px !important;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        min-width: 48px;
+        background: #6e7270;
+        border: 2px solid #f1f1f1;
+        border-radius: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        background: #4f5351;
+    }
+}
+
 
 footer {
   background-color: #f8f8f8;

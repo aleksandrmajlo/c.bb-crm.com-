@@ -83,6 +83,35 @@ class HomeController extends Controller
 
     }
 
+    public function utc(Request $request)
+    {
+        $user = Auth::user();
+        if ($user) {
+        } else {
+            $ip = $request->ip();
+            $apiurl = "http://ip-api.com/php/";
+            $ip_datas = null;
+            try {
+                $contents = file_get_contents($apiurl . $ip . '?fields=status,country,countryCode');
+                $ip_datas = unserialize($contents);
+                if ($ip_datas['status'] == "success") {
+                    $num_of_minutes_until_expire = 60000;
+                    Cookie::queue('billiards_countryCode', strtolower($ip_datas['countryCode']), $num_of_minutes_until_expire, null, env('SESSION_DOMAIN'));
+                }
+            } catch (\Exception $e) {
+
+            }
+
+            $title = "Клуб УТЦ - система бронювання";
+
+            return view('home', [
+                'route' => 'utc',
+                'ip_datas' => $ip_datas,
+                'title' => $title
+            ]);
+        }
+    }
+
     public function rules_and_conditions(){
         $ip_datas=['status'=>'error'];
         $title='Правила і умови';

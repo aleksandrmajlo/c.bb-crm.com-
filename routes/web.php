@@ -15,6 +15,9 @@ Route::get('/', function () {
 Route::get('/atmosphera/success', function () {
     return view('payment.success');
 })->name('payment.success');
+Route::get('/utc/success', function () {
+    return view('payment.success', ['returnUrl' => route('utc')]);
+})->name('utc.payment.success');
 
 Auth::routes();
 
@@ -22,6 +25,7 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name
 
 Route::get('/atmosphera', [App\Http\Controllers\HomeController::class, 'atmosphera'])->name('atmosphera');
 Route::get('/liodovii', [App\Http\Controllers\HomeController::class, 'liodovii'])->name('liodovii');
+Route::get('/utc', [App\Http\Controllers\HomeController::class, 'utc'])->name('utc');
 
 Route::get('/atmosphera/rules-and-conditions', [App\Http\Controllers\HomeController::class, 'rules_and_conditions'])->name('rules-and-conditions');
 Route::get('/atmosphera/rules-for-turning-penny-money', [App\Http\Controllers\HomeController::class, 'rules_for_turning'])->name('rules-for-turning-penny-money');

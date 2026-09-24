@@ -29,7 +29,7 @@
                 <div class="main_cont">
                     <div style="display: flex;" class="tub_body active">
                         <div data-module="sticky-table" class="table">
-                            <div class='flex swiper js-base-slider'>
+                            <div class="schedule-scroll flex swiper js-base-slider" aria-label="Розклад майданчиків" tabindex="0">
                                 <ul class='parent-th swiper-wrapper  wrapShulde'>
                                     <li class="th swiper-slide">
                                         <ul class="second-level">
