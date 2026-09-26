@@ -14,47 +14,6 @@
         <select-pay v-if="stepGlobal=='select_pay'"></select-pay>
         <way v-if="stepGlobal=='way'"></way>
         <my-bookings v-if="stepGlobal=='my_bookings'"></my-bookings>
-
-
-
-        <!--
-
-                <pre style="border:10px solid brown;margin:10px;width: 100%;display: block;padding: 2rem;">
-            {{pay_id}}
-        </pre>
-
-                <pre style="border:10px solid brown;margin:10px;width: 100%;display: block;padding: 2rem;">
-            {{stepGlobal}}
-        </pre>
-        <pre style="border:10px solid green;margin:10px;width: 100%;display: block;padding: 2rem;">
-           {{orders}}
-        </pre> 
-
-<pre style="border:10px solid brown;margin:10px;width: 100%;display: block;padding: 2rem;">
-{{phone}}
-</pre>
-
-
-
-<pre style="border:10px solid rebeccapurple;margin:10px;width: 100%;display: block;padding: 2rem;">
-{{pdf_name}}
-</pre>
-
-<pre style="border:10px solid brown;margin:10px;width: 100%;display: block;padding: 2rem;">
-{{orders}}
-</pre>
-
-<pre style="border:10px solid blue;margin:10px;width: 100%;display: block;padding: 2rem;">
-</pre>
-
-<pre style="border:10px solid red;margin:10px;width: 100%;display: block;padding: 2rem;">
-{{counter}}
-</pre>
-
-<pre style="border:10px solid greenyellow;margin:10px;width: 100%;display: block;padding: 2rem;">
-{{times_dop}}
-</pre>
--->
     </div>
 </template>
 
@@ -111,7 +70,7 @@ export default {
     },
     mounted() {
         this.intervalId = setInterval(() => {
-            if(!this.isAiax){
+            if(this.phone && !this.isAiax){
                 this.$store.dispatch('updateClearOrder').then(() => { });
             }
         }, 60000);
@@ -128,4 +87,3 @@ export default {
     }
 }
 </script>
-

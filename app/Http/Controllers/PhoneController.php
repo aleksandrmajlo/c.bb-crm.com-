@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Phone;
 use App\Services\SmsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class PhoneController extends Controller
 {
@@ -14,16 +15,18 @@ class PhoneController extends Controller
 
           $digits = 6;
           $random_number = rand(pow(10, $digits - 1), pow(10, $digits) - 1);
-          if(env('APP_NAME')=='Laravel_test'){
-              $random_number=111111;
-          }
-          $validatePhoneUsa = SmsService::validatePhoneUsa($phone);
-          if ($validatePhoneUsa) {
-              $result_send = SmsService::sendsmsUsa($phone, $random_number);
-              $id_sms = $result_send['id_sms'];
+          if (app()->environment('local')) {
+              $random_number = 111111;
+              $id_sms = 'local-' . Str::uuid();
           } else {
-              $result_send = SmsService::sendsms($phone, $random_number);
-              $id_sms = $result_send['id_sms'];
+              $validatePhoneUsa = SmsService::validatePhoneUsa($phone);
+              if ($validatePhoneUsa) {
+                  $result_send = SmsService::sendsmsUsa($phone, $random_number);
+                  $id_sms = $result_send['id_sms'];
+              } else {
+                  $result_send = SmsService::sendsms($phone, $random_number);
+                  $id_sms = $result_send['id_sms'];
+              }
           }
           $condition = ['phone' => $phone];
           $values = [

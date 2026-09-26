@@ -204,6 +204,9 @@ export default {
                 this.$store.commit('table_dop_idSet', el.table_id);
             }
         });
+        if (!this.table_dop_id) {
+            return;
+        }
         this.isLoading = true;
         this.$store.dispatch('getBokingsDops').then(() => {
             this.isLoading = false;
@@ -227,6 +230,9 @@ export default {
             })
         },
         setOrderDop(time) {
+            if (!this.table_dop_id) {
+                return;
+            }
             this.isLoading=true;
             this.$store.commit('orderSet', {
                 table_id:this.table_dop_id,

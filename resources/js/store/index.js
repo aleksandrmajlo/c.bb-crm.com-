@@ -114,10 +114,15 @@ export default createStore({
 
        orderSet(state,datas){
             const uniqueString = Date.now().toString(36) + Math.random().toString(36).substring(2);
+            const table = state.tables[datas.table_id];
+            const bookingDate = state.week[state.date_booking];
             state.orders.push({
               date:state.date_booking,
+              date_title:bookingDate ? bookingDate.title : state.date_booking,
+              date_day:bookingDate ? bookingDate.day : '',
               time:datas.time,
               table_id:datas.table_id,
+              table_title:table ? table.title : '',
               employment_id:datas.employment_id,
               tennis_options:datas.tennis_options,
               primary:datas.primary,
@@ -180,15 +185,19 @@ export default createStore({
        },
 
        clearOrders(state,ids){
-           let bol=false;
-           state.orders.forEach((el,index )=> {
-             let booking_id=el.booking_id;
-             if (ids.indexOf(booking_id) !== -1) {
-         
-              }  else{
-                 bol=true;
-                 state.orders.splice(index, 1);
-              } 
+           let bol = false;
+           state.orders = state.orders.filter((order) => {
+               // A booking without an id exists only in the browser and cannot
+               // be checked against the server until it has been saved.
+               if (!order.booking_id) {
+                   return true;
+               }
+
+               const exists = ids.includes(order.booking_id);
+               if (!exists) {
+                   bol = true;
+               }
+               return exists;
            });
            if(bol){
               this.dispatch('getBokingsDops').then(() => {

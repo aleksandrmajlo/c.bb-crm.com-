@@ -16,9 +16,9 @@
                             <div class="left">
                                 <ul class="list js_cart_list">
                                     <li class="item main-item">
-                                        <span class="js_day_item title-h3">{{ tables[order.table_id].title }}</span><br>
-                                        <span class="js_day_item">{{ week[order.date].title }} · {{ order.time.text }}</span>
-                                        <span class="time">{{ week[order.date].day }} · 1:00 {{$t('hours')}}</span>
+                                        <span class="js_day_item title-h3">{{ tableTitle(order) }}</span><br>
+                                        <span class="js_day_item">{{ dateTitle(order) }} · {{ order.time.text }}</span>
+                                        <span class="time">{{ dateDay(order) }} · 1:00 {{$t('hours')}}</span>
                                     </li>
                                 </ul>
                             </div>
@@ -85,6 +85,15 @@ export default {
         this.getTotal();
     },
     methods: {
+        tableTitle(order) {
+            return order.table_title || this.tables[order.table_id]?.title || '—';
+        },
+        dateTitle(order) {
+            return order.date_title || this.week[order.date]?.title || order.date || '—';
+        },
+        dateDay(order) {
+            return order.date_day || this.week[order.date]?.day || '';
+        },
         removeOrder(booking_id){
             Swal.fire({
                 text: this.$t('booking_delete'),
