@@ -3,7 +3,16 @@
         <loading v-model:active="isLoading" :is-full-page="fullPage"/>
         <div class="wrapper">
             <div class="container">
-                <div class="title-h2 bottom-m">{{$t('change_date')}}</div>
+                <div class="schedule-heading bottom-m">
+                    <div class="title-h2">{{$t('change_date')}}</div>
+                    <a v-if="route === 'utc'"
+                       href="/club/utc.jpg"
+                       class="club-scheme-link"
+                       @click.prevent="showClubScheme">
+                        <i class="fas fa-map-marked-alt" aria-hidden="true"></i>
+                        <span>{{$t('club_scheme')}}</span>
+                    </a>
+                </div>
                 <div class="card__tabs">
                     <ul class="tub_header">
                         <li v-for="(date,key) in week" class="item " :class="key==date_booking ? 'active' : ''">
@@ -79,6 +88,7 @@
 import {mapState, mapActions} from 'vuex';
 import Loading from 'vue-loading-overlay';
 import 'vue-loading-overlay/dist/css/index.css';
+import Swal from 'sweetalert2';
 
 export default {
     name: "SportsDays",
@@ -97,6 +107,7 @@ export default {
     computed: {
         ...mapState({
             orders: (state) => state.orders,
+            route: (state) => state.route,
             date_booking: (state) => state.date_booking,
             week: (state) => state.week,
             tables: (state) => state.tables,
@@ -104,6 +115,19 @@ export default {
         }),
     },
     methods: {
+        showClubScheme() {
+            Swal.fire({
+                title: this.$t('club_scheme'),
+                imageUrl: '/club/utc.jpg',
+                imageAlt: this.$t('club_scheme'),
+                width: 'min(1200px, 95vw)',
+                confirmButtonText: this.$t('close'),
+                confirmButtonColor: '#f58220',
+                customClass: {
+                    popup: 'club-scheme-popup',
+                },
+            });
+        },
         setDate(date_booking) {
             this.isLoading = true;
             this.$store.commit('date_bookingSet', date_booking);
@@ -128,3 +152,48 @@ export default {
     }
 }
 </script>
+
+<style scoped>
+.schedule-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.club-scheme-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 0 0 auto;
+    padding: 0.65rem 1rem;
+    border-radius: 0.5rem;
+    background: #f58220;
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 0.25rem 0.75rem rgba(245, 130, 32, 0.3);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.club-scheme-link:hover,
+.club-scheme-link:focus {
+    background: #d96d0e;
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+:global(.club-scheme-popup .swal2-image) {
+    width: auto;
+    max-width: 100%;
+    max-height: 72vh;
+    object-fit: contain;
+}
+
+@media (max-width: 767px) {
+    .schedule-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+</style>

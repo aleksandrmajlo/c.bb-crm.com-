@@ -29,7 +29,7 @@
                 </div>
             </div>
             <div style="margin-bottom: 1rem;text-align: center">
-                <button :disabled="disabled"  style="min-width: 250px;"  @click.prevent="setStep('login')" class="btn btn-orange">{{$t('go_pay')}}</button>
+                <button :disabled="disabled || isLoading"  style="min-width: 250px;"  @click.prevent="setStep('login')" class="btn btn-orange">{{$t('go_pay')}}</button>
             </div>
         </div>
     </div>
@@ -59,7 +59,15 @@ export default {
     methods:{
         setStep(step){
             if(this.phone){
-                this.$store.commit('stepGlobalSet', 'result');
+                if (this.isLoading) {
+                    return;
+                }
+                this.isLoading = true;
+                this.$store.dispatch('addBooking').then(() => {
+                    this.$store.commit('stepGlobalSet', 'result');
+                }).finally(() => {
+                    this.isLoading = false;
+                });
             }else{
                 this.$store.commit('stepGlobalSet', step);
             }
@@ -78,4 +86,3 @@ export default {
 
 }
 </script>
-

@@ -14,6 +14,9 @@
         <select-pay v-if="stepGlobal=='select_pay'"></select-pay>
         <way v-if="stepGlobal=='way'"></way>
         <my-bookings v-if="stepGlobal=='my_bookings'"></my-bookings>
+        <pre v-if="isLocal" style="border: 5px magenta solid;margin: 20px;padding: 10px;">
+            {{ stepGlobal }}
+        </pre>
     </div>
 </template>
 
@@ -30,6 +33,12 @@ import Way from './pay/Way.vue';
 
 export default {
     name: "App",
+    props: {
+        isLocal: {
+            type: Boolean,
+            default: false,
+        },
+    },
     components: {
         Login,
         ActionSelect,

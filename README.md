@@ -1,66 +1,139 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# BilliardCRM Client
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Клиентская часть публичного бронирования клубов BilliardCRM. Проект работает на Laravel 11, PHP 8.2, Vue 3 и Vite.
 
-## About Laravel
+## Локальное окружение
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Проект запускается в общем Docker-окружении из директории:
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+```text
+/Users/aleksandrmajlo/sites/ruks/Billiard
+```
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Основные адреса:
 
-## Learning Laravel
+- клиент: <http://localhost:8083>
+- УТЦ: <http://localhost:8083/utc>
+- CRM API: <http://localhost:8000>
+- Adminer: <http://localhost:8080>
+- Mailpit: <http://localhost:8026>
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Первый запуск
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+```bash
+cd /Users/aleksandrmajlo/sites/ruks/Billiard
+./billiard-local.sh setup
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Команда устанавливает зависимости, запускает контейнеры и импортирует дампы только в пустые локальные базы. Laravel-миграции не запускаются.
 
-## Laravel Sponsors
+## Ежедневная работа
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+cd /Users/aleksandrmajlo/sites/ruks/Billiard
 
-### Premium Partners
+./billiard-local.sh up
+./billiard-local.sh status
+./billiard-local.sh check
+./billiard-local.sh down
+```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+Логи клиента:
 
-## Contributing
+```bash
+./billiard-local.sh logs client
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Очистка Laravel-кеша:
 
-## Code of Conduct
+```bash
+./billiard-local.sh artisan client optimize:clear
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Frontend
 
-## Security Vulnerabilities
+После изменения Vue, JavaScript, SCSS или статических ресурсов выполните:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+cd /Users/aleksandrmajlo/sites/ruks/Billiard/c.bb-crm.com
+npm ci
+npm run build
+```
 
-## License
+Собранные файлы `public/build` создаются Vite и не добавляются в Git.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Проверка
+
+```bash
+cd /Users/aleksandrmajlo/sites/ruks/Billiard
+./billiard-local.sh artisan client test
+
+cd /Users/aleksandrmajlo/sites/ruks/Billiard/c.bb-crm.com
+git diff --check
+```
+
+Ручная проверка УТЦ:
+
+1. Открыть <http://localhost:8083/utc>.
+2. Проверить ссылку «Схема клубу» и popup с изображением.
+3. Выбрать площадку, время и тип занятия.
+4. Локально войти с кодом `111111`: SMS-провайдер в `APP_ENV=local` не вызывается.
+5. На экране заказа нажать «Назад» → «Створити нову бронь».
+6. Выбрать ещё одно занятие. Повторный ввод телефона и SMS-кода не должен появляться.
+
+## Базы данных
+
+- База УТЦ: `billiards_14`.
+- Локальные базы загружаются из `/Users/aleksandrmajlo/sites/ruks/Billiard/dumps`.
+- Миграции для этого окружения запрещены.
+- `./billiard-local.sh db-import` импортирует только пустые базы.
+- `./billiard-local.sh db-refresh --yes` полностью заменяет локальные базы данными из дампов. Использовать только осознанно.
+
+## Правила разработки
+
+- Сохранять поведение существующих клубов и маршрутов.
+- Функциональность только для УТЦ обязательно ограничивать проверкой `route === 'utc'`.
+- Не добавлять в Git `.env`, дампы баз, созданные PDF, `public/build`, `vendor`, `node_modules` и служебные файлы macOS `._*`.
+- Не хранить ключи API, пароли и production-доступы в коде или README.
+- Не запускать миграции локально или на production без отдельного согласования.
+- Перед коммитом проверять `git status`, `git diff` и явно добавлять только нужные файлы. Не использовать `git add .`.
+- Не использовать `git push --force` для `main`.
+
+Очистка служебных macOS-файлов перед коммитом:
+
+```bash
+cd /Users/aleksandrmajlo/sites/ruks/Billiard/c.bb-crm.com
+dot_clean -m .
+find . -type f -name '._*' -print
+```
+
+После `dot_clean` команда `find` не должна ничего выводить. Шаблоны `.DS_Store` и `._*` уже добавлены в `.gitignore`.
+
+## Git: отправка в `main`
+
+```bash
+cd /Users/aleksandrmajlo/sites/ruks/Billiard/c.bb-crm.com
+
+git branch --show-current
+git status --short
+git add <перечень-нужных-файлов>
+git diff --cached --check
+git --no-pager diff --cached --stat
+git commit -m "Описание изменения"
+git fetch origin
+git rebase --autostash origin/main
+git push origin main
+```
+
+Если возник конфликт rebase, не применять `reset --hard` и не выполнять force-push. Сначала сохранить вывод ошибки и разобраться с конфликтом.
+
+## Production checklist
+
+1. Сделать резервную копию файлов и базы.
+2. Проверить текущую ветку и чистоту рабочей директории.
+3. Получить изменения из `main` без force-операций.
+4. Установить зависимости из lock-файлов.
+5. Собрать frontend командой `npm run build`.
+6. Очистить Laravel-кеши командой `php artisan optimize:clear`.
+7. Не запускать миграции.
+8. Проверить `/utc`, авторизацию, повторное бронирование и оплату.
