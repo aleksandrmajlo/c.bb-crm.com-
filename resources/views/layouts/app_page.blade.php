@@ -33,6 +33,7 @@
         <link rel="icon" type="image/png" sizes="192x192" href="{{ asset($pwa['favicon']) }}">
         <link rel="apple-touch-icon" sizes="180x180" href="{{ asset($pwa['icon']) }}">
         <link rel="stylesheet" href="{{ asset('pwa/install-prompt.css') }}">
+        <link rel="stylesheet" href="{{ asset('css/booking-mobile.css') }}">
         <script defer src="{{ asset('pwa/install-prompt.js') }}"></script>
     @endif
     <link rel="dns-prefetch" href="//fonts.bunny.net">
