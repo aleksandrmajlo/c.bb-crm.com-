@@ -1,0 +1,32 @@
+{
+    "id": "/atmosphera",
+    "name": "Клуб Атмосфера — бронювання",
+    "short_name": "Атмосфера",
+    "description": "Онлайн-бронювання в клубі Атмосфера",
+    "lang": "uk",
+    "start_url": "/atmosphera",
+    "scope": "/atmosphera",
+    "display": "standalone",
+    "background_color": "#F7F7F7",
+    "theme_color": "#05973D",
+    "icons": [
+        {
+            "src": "/pwa/icons/atmosphera-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/pwa/icons/atmosphera-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/pwa/icons/atmosphera-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

@@ -1,0 +1,32 @@
+{
+    "id": "/utc",
+    "name": "Клуб УТЦ — бронювання",
+    "short_name": "УТЦ",
+    "description": "Онлайн-бронювання в клубі УТЦ",
+    "lang": "uk",
+    "start_url": "/utc",
+    "scope": "/utc",
+    "display": "standalone",
+    "background_color": "#F7F7F7",
+    "theme_color": "#17221B",
+    "icons": [
+        {
+            "src": "/pwa/icons/utc-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/pwa/icons/utc-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/pwa/icons/utc-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

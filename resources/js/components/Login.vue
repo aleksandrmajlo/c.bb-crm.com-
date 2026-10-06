@@ -10,7 +10,6 @@
                     <div class="wrapPhone input-container">
                         <input class="input1 input-phone" id="phone_inp"/>
                     </div>
-<!--                    <div v-if="!isValid" class="error">{{ validationMessage }}</div>-->
                     <button :disabled="!phoneValid"
                         @click.prevent="sendPhone"
                         class="btn btn-orange nowrap phone_enter_button">{{ $t('message.login_enter') }}
