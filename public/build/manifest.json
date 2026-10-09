@@ -1,0 +1,28 @@
+{
+  "node_modules/intl-tel-input/build/img/flags.png": {
+    "file": "assets/flags-41zgeiS_.png",
+    "src": "node_modules/intl-tel-input/build/img/flags.png"
+  },
+  "node_modules/intl-tel-input/build/img/flags@2x.png": {
+    "file": "assets/flags@2x-hM8LloC1.png",
+    "src": "node_modules/intl-tel-input/build/img/flags@2x.png"
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-C5Hl5-oD.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "css": [
+      "assets/app-Dbi1dGEY.css"
+    ],
+    "assets": [
+      "assets/flags-41zgeiS_.png",
+      "assets/flags@2x-hM8LloC1.png"
+    ]
+  },
+  "resources/sass/app.scss": {
+    "file": "assets/app-kvoBt-jL.css",
+    "src": "resources/sass/app.scss",
+    "isEntry": true
+  }
+}
