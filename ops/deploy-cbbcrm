@@ -1,0 +1,189 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+umask 027
+
+readonly APP_NAME="c.bb-crm.com"
+readonly DEPLOY_ROOT="/srv/deploy/${APP_NAME}"
+readonly SOURCE_DIR="${DEPLOY_ROOT}/incoming/release"
+readonly PREPARED_ROOT="${DEPLOY_ROOT}/prepared"
+readonly BACKUP_ROOT="${DEPLOY_ROOT}/backups"
+readonly LIVE_DIR="/var/www/bb_crm/data/www/${APP_NAME}"
+readonly APP_USER="bb_crm"
+readonly APP_GROUP="bb_crm"
+readonly PHP_BIN="/usr/bin/php"
+readonly COMPOSER_BIN="/usr/local/bin/composer"
+readonly HEALTHCHECK_URL="https://${APP_NAME}/utc"
+readonly KEEP_BACKUPS=5
+
+prepared_dir=""
+
+log() {
+    printf '[deploy] %s\n' "$*"
+}
+
+fail() {
+    printf '[deploy] ERROR: %s\n' "$*" >&2
+    exit 1
+}
+
+cleanup() {
+    if [[ -n "${prepared_dir}" && "${prepared_dir}" == "${PREPARED_ROOT}/"* ]]; then
+        rm -rf -- "${prepared_dir}"
+    fi
+}
+
+run_artisan() {
+    runuser -u "${APP_USER}" -- \
+        /bin/sh -c 'cd "$1" && exec "$2" artisan "$3"' \
+        sh "${LIVE_DIR}" "${PHP_BIN}" "$1"
+}
+
+restore_backup() {
+    local backup_dir="$1"
+
+    log "Health check failed; restoring ${backup_dir}"
+    rsync -a --delete --delay-updates --safe-links \
+        --chown="${APP_USER}:${APP_GROUP}" \
+        --exclude='.env' \
+        --exclude='storage' \
+        --exclude='bootstrap/cache' \
+        --exclude='public/storage' \
+        "${backup_dir}/" "${LIVE_DIR}/"
+
+    run_artisan optimize:clear
+    run_artisan package:discover
+    run_artisan config:cache
+    run_artisan view:cache
+}
+
+refresh_caches() {
+    run_artisan optimize:clear \
+        && run_artisan package:discover \
+        && run_artisan config:cache \
+        && run_artisan view:cache
+}
+
+[[ "${EUID}" -eq 0 ]] || fail "run this command through sudo"
+
+for command in flock rsync runuser curl; do
+    command -v "${command}" >/dev/null 2>&1 || fail "missing command: ${command}"
+done
+
+[[ -x "${PHP_BIN}" ]] || fail "PHP not found at ${PHP_BIN}"
+[[ -x "${COMPOSER_BIN}" ]] || fail "Composer not found at ${COMPOSER_BIN}"
+[[ -d "${LIVE_DIR}" ]] || fail "live directory does not exist"
+[[ -f "${LIVE_DIR}/.env" ]] || fail "production .env is missing"
+[[ -d "${SOURCE_DIR}" && ! -L "${SOURCE_DIR}" ]] || fail "uploaded release is missing"
+[[ -f "${SOURCE_DIR}/artisan" ]] || fail "artisan is missing from release"
+[[ -f "${SOURCE_DIR}/composer.json" ]] || fail "composer.json is missing from release"
+[[ -f "${SOURCE_DIR}/public/build/manifest.json" ]] || fail "frontend build is missing"
+[[ ! -e "${SOURCE_DIR}/.env" ]] || fail "release must not contain .env"
+[[ -f "${SOURCE_DIR}/.release-id" ]] || fail "release id is missing"
+
+# GitHub supplies the commit SHA. Accepting only 40 hexadecimal characters
+# prevents the value from becoming an unsafe filesystem path.
+release_id="$(tr -cd '0-9a-f' < "${SOURCE_DIR}/.release-id")"
+[[ "${#release_id}" -eq 40 ]] || fail "release id must be a 40-character Git SHA"
+
+# flock prevents concurrent deployments from mixing two releases.
+exec 9>"/run/lock/deploy-cbbcrm.lock"
+flock -n 9 || fail "another deployment is already running"
+
+trap cleanup EXIT
+
+install -d -m 0750 -o root -g root "${PREPARED_ROOT}" "${BACKUP_ROOT}"
+prepared_dir="$(mktemp -d "${PREPARED_ROOT}/${release_id}.XXXXXX")"
+
+log "Preparing release ${release_id}"
+# Runtime data and secrets never come from GitHub and are not copied here.
+rsync -a --delete --safe-links \
+    --exclude='.git/' \
+    --exclude='.github/' \
+    --exclude='.env' \
+    --exclude='node_modules/' \
+    --exclude='vendor/' \
+    --exclude='storage' \
+    --exclude='bootstrap/cache' \
+    --exclude='public/storage' \
+    --exclude='ops/' \
+    --exclude='.release-id' \
+    "${SOURCE_DIR}/" "${prepared_dir}/"
+
+install -d -m 0775 -o "${APP_USER}" -g "${APP_GROUP}" \
+    "${prepared_dir}/bootstrap/cache"
+chown -R "${APP_USER}:${APP_GROUP}" "${prepared_dir}"
+ln -s "${LIVE_DIR}/.env" "${prepared_dir}/.env"
+ln -s "${LIVE_DIR}/storage" "${prepared_dir}/storage"
+chown -h "${APP_USER}:${APP_GROUP}" \
+    "${prepared_dir}/.env" "${prepared_dir}/storage"
+
+log "Installing locked PHP dependencies"
+# Composer runs as the website owner, never as root. This is dependency
+# installation only; Composer install does not run php artisan migrate.
+runuser -u "${APP_USER}" -- \
+    "${COMPOSER_BIN}" install \
+    --working-dir="${prepared_dir}" \
+    --no-dev \
+    --prefer-dist \
+    --no-interaction \
+    --no-progress \
+    --optimize-autoloader
+
+backup_dir="${BACKUP_ROOT}/$(date -u +%Y%m%dT%H%M%SZ)-${release_id:0:12}"
+install -d -m 0750 -o root -g root "${backup_dir}"
+
+log "Creating code rollback snapshot"
+# Hard-linked files make this code snapshot fast and space-efficient.
+rsync -a --delete --link-dest="${LIVE_DIR}" \
+    --exclude='.env' \
+    --exclude='storage' \
+    --exclude='bootstrap/cache' \
+    --exclude='public/storage' \
+    "${LIVE_DIR}/" "${backup_dir}/"
+
+log "Publishing release"
+# --delay-updates prepares replacements before the short final rename phase.
+# Exclusions preserve production secrets, uploads and writable runtime data.
+if ! rsync -a --delete --delay-updates --safe-links \
+    --chown="${APP_USER}:${APP_GROUP}" \
+    --exclude='.env' \
+    --exclude='storage' \
+    --exclude='bootstrap/cache' \
+    --exclude='public/storage' \
+    "${prepared_dir}/" "${LIVE_DIR}/"; then
+    restore_backup "${backup_dir}"
+    fail "publishing failed; previous code was restored"
+fi
+
+log "Refreshing Laravel caches (no migrations)"
+# Deliberately no `php artisan migrate` command in this script.
+if ! refresh_caches; then
+    restore_backup "${backup_dir}"
+    fail "cache refresh failed; previous code was restored"
+fi
+
+# A failed health check restores the previous code snapshot automatically.
+if ! curl --fail --silent --show-error --location --max-time 20 \
+    "${HEALTHCHECK_URL}" >/dev/null; then
+    restore_backup "${backup_dir}"
+    fail "health check failed; previous code was restored"
+fi
+
+log "Health check passed"
+rm -rf -- "${SOURCE_DIR}"
+
+mapfile -t expired_backups < <(
+    find "${BACKUP_ROOT}" -mindepth 1 -maxdepth 1 -type d \
+        -printf '%T@ %p\n' \
+        | sort -nr \
+        | awk -v keep="${KEEP_BACKUPS}" 'NR > keep {$1=""; sub(/^ /, ""); print}'
+)
+
+for expired_backup in "${expired_backups[@]}"; do
+    if [[ "${expired_backup}" == "${BACKUP_ROOT}/"* ]]; then
+        rm -rf -- "${expired_backup}"
+    fi
+done
+
+log "Release ${release_id} deployed successfully"

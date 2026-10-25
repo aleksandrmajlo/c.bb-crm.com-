@@ -1,0 +1,150 @@
+name: CI and production deployment
+
+# CI runs for pull requests and main. CD deploys only the main branch.
+# Database migrations are intentionally not part of this workflow.
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  # The workflow only needs to download repository content.
+  contents: read
+
+concurrency:
+  # Never run two production deployments at the same time.
+  group: c-bb-crm-production
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Configure Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked frontend dependencies
+        run: npm ci
+
+      - name: Build production frontend
+        run: npm run build
+
+      - name: Require committed public/build files
+        # public/build remains tracked in Git during the current migration phase.
+        run: |
+          if [[ -n "$(git status --porcelain -- public/build)" ]]; then
+            echo "public/build differs from npm run build. Commit the generated files."
+            git status --short -- public/build
+            exit 1
+          fi
+
+      - name: Package application
+        env:
+          RELEASE_ID: ${{ github.sha }}
+        run: |
+          printf '%s\n' "$RELEASE_ID" > .release-id
+          tar \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.env' \
+            --exclude='node_modules' \
+            --exclude='vendor' \
+            --exclude='storage' \
+            --exclude='bootstrap/cache' \
+            --exclude='public/storage' \
+            --exclude='ops' \
+            -czf "$RUNNER_TEMP/release.tar.gz" \
+            .
+
+      - name: Save deployment artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: c-bb-crm-${{ github.sha }}
+          path: ${{ runner.temp }}/release.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy:
+    name: Deploy production
+    needs: build
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      # Environment secrets are exposed only to this production job.
+      name: production
+      url: https://c.bb-crm.com/utc
+
+    steps:
+      - name: Download deployment artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: c-bb-crm-${{ github.sha }}
+          path: ${{ runner.temp }}/artifact
+
+      - name: Configure deployment SSH key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/deploy_key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
+
+      - name: Upload and unpack release in staging
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+        run: |
+          : "${DEPLOY_HOST:?Missing production DEPLOY_HOST variable}"
+          : "${DEPLOY_PORT:?Missing production DEPLOY_PORT variable}"
+          : "${DEPLOY_USER:?Missing production DEPLOY_USER variable}"
+
+          scp \
+            -i "$HOME/.ssh/deploy_key" \
+            -P "$DEPLOY_PORT" \
+            "$RUNNER_TEMP/artifact/release.tar.gz" \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:/srv/deploy/c.bb-crm.com/incoming/release.tar.gz.tmp"
+
+          ssh \
+            -i "$HOME/.ssh/deploy_key" \
+            -p "$DEPLOY_PORT" \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            'set -eu
+             cd /srv/deploy/c.bb-crm.com/incoming
+             rm -rf release.new
+             mkdir release.new
+             tar --extract --gzip --file release.tar.gz.tmp --directory release.new --no-same-owner --no-same-permissions
+             rm -f release.tar.gz.tmp
+             rm -rf release
+             mv release.new release'
+
+      - name: Publish release
+        # sudoers permits this exact fixed command and no arbitrary root command.
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+        run: |
+          ssh \
+            -i "$HOME/.ssh/deploy_key" \
+            -p "$DEPLOY_PORT" \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            'sudo -n /usr/local/sbin/deploy-cbbcrm'

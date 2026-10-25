@@ -1,0 +1,3 @@
+# GitHub Actions may run only the fixed c.bb-crm.com deployment command.
+# The empty argument string means that no command-line arguments are allowed.
+deploy-cbbcrm ALL=(root) NOPASSWD: /usr/local/sbin/deploy-cbbcrm ""
