@@ -23,6 +23,13 @@ class SmsService
                 'id_sms' => time()
             ];
         }
+        if (app()->environment('local')) {
+            return [
+                'suc' => 1,
+                'text' => '',
+                'id_sms' => 'local-' . Str::uuid()
+            ];
+        }
         try {
             // Подключаемся к серверу
             $client = new \SoapClient('http://turbosms.in.ua/api/wsdl.html');
@@ -100,6 +107,20 @@ class SmsService
             'text' => '',
             'id_sms' => null
         ];
+        if(env('APP_NAME')=='Laravel_test'){
+            return [
+                'suc' => 1,
+                'text' => '',
+                'id_sms' => time()
+            ];
+        }
+        if (app()->environment('local')) {
+            return [
+                'suc' => 1,
+                'text' => '',
+                'id_sms' => 'local-' . Str::uuid()
+            ];
+        }
         $conf=config('sms');
         if (!$code) {
             $code = rand(1000, 9999);

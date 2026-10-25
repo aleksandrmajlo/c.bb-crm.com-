@@ -26,6 +26,25 @@
                             </ul>
                         </div>
 
+                        <div v-if="route === 'utc' && employment_id" class="additional-trainer">
+                            <label class="additional-trainer__label" for="additional-trainer-select">
+                                {{$t('trainer')}}
+                            </label>
+                            <div class="additional-trainer__select">
+                                <select id="additional-trainer-select" v-model="selectedAdditionalTrainerId">
+                                    <option value="">{{$t('without_trainer')}}</option>
+                                    <option
+                                        v-for="trainer in trainers"
+                                        :key="trainer.id"
+                                        :value="String(trainer.id)"
+                                    >
+                                        {{ trainerLabel(trainer) }}
+                                    </option>
+                                </select>
+                                <span class="additional-trainer__icon" aria-hidden="true"></span>
+                            </div>
+                        </div>
+
                         <!--            ****************************************************************            -->
                         <div  class="ma_in_cont main_cont_checkout " id="main_cont_checkout">
                             <div class="slick-list draggable my_slick-list">
@@ -163,6 +182,7 @@ export default {
             accept:true,
             isLoading: false,
             fullPage: 1,
+            selectedAdditionalTrainerId: '',
         }
     },
     computed: {
@@ -183,6 +203,9 @@ export default {
             times: (state) => state.times,
             employment_id: (state) => state.employment_id,
             tennis_options: (state) => state.tennis_options,
+            trainers: (state) => state.trainers,
+            trainer_id: (state) => state.trainer_id,
+            route: (state) => state.route,
 
             date_booking: (state) => state.date_booking,
             week: (state) => state.week,
@@ -193,12 +216,20 @@ export default {
 
             total: (state) => state.total,
         }),
+        selectedAdditionalTrainer(){
+            return this.trainers.find(
+                trainer => String(trainer.id) === String(this.selectedAdditionalTrainerId)
+            ) || null;
+        },
         ...mapGetters([
             'isValidOrder','halfDops',
         ]),
 
     },
     created() {
+        this.selectedAdditionalTrainerId = this.trainer_id
+            ? String(this.trainer_id)
+            : '';
         this.orders.forEach((el,index )=> {
             if(el.primary){
                 this.$store.commit('table_dop_idSet', el.table_id);
@@ -238,6 +269,11 @@ export default {
                 table_id:this.table_dop_id,
                 employment_id:this.employment_id,
                 tennis_options:this.tennis_options,
+                trainer_id:this.selectedAdditionalTrainer ? this.selectedAdditionalTrainer.id : null,
+                trainer_title:this.selectedAdditionalTrainer ? this.selectedAdditionalTrainer.name : '',
+                trainer_price:this.selectedAdditionalTrainer
+                    ? this.trainerPrice(this.selectedAdditionalTrainer)
+                    : 0,
                 time:time,
                 primary:false,
                 booking_id:null,
@@ -252,6 +288,12 @@ export default {
                 },2000)
              })
 
+        },
+        trainerPrice(trainer){
+            return Number(trainer.tariffs?.[this.employment_id] ?? 0);
+        },
+        trainerLabel(trainer){
+            return `${trainer.name} · +${this.trainerPrice(trainer)} грн/год`;
         },
         pay() {
             this.$store.commit('stepGlobalSet', 'select_pay');
@@ -272,6 +314,54 @@ export default {
 }
 </script>
 <style >
+.additional-trainer {
+    max-width: 340px;
+    margin: 0 0 2rem 10px;
+}
+
+.additional-trainer__label {
+    display: block;
+    margin-bottom: 8px;
+    color: #17221b;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.additional-trainer__select {
+    position: relative;
+}
+
+.additional-trainer__select select {
+    width: 100%;
+    min-height: 56px;
+    padding: 0 44px 0 16px;
+    border: 1px solid rgba(38, 56, 82, .16);
+    border-radius: 12px;
+    outline: none;
+    background: #fff;
+    color: #17221b;
+    font: inherit;
+    font-weight: 600;
+    appearance: none;
+}
+
+.additional-trainer__select select:focus {
+    border-color: #279944;
+    box-shadow: 0 0 0 3px rgba(39, 153, 68, .12);
+}
+
+.additional-trainer__icon {
+    position: absolute;
+    top: 50%;
+    right: 17px;
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid #279944;
+    border-bottom: 2px solid #279944;
+    pointer-events: none;
+    transform: translateY(-70%) rotate(45deg);
+}
+
 .main_cont_checkout .status-cell {
     display: -webkit-box;
     display: -webkit-flex;

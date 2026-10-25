@@ -3,21 +3,88 @@
         <loading v-model:active="isLoading" :is-full-page="fullPage"/>
         <div class="booking">
 
-            <div class="title-h3" style="margin-bottom: 0.5rem;margin-top: 0.5rem;">{{$t('select_emp')}}</div>
-            <div class='radio_employments'>
-
-                <div class="radio" v-for="(employment,index) in employments" :key="index">
-                    <input @change="emplChange(employment.id)" name="emp" :value="employment.id" :id="'emp'+employment.id+'_'+index"
-                        :checked="Number(employment_id) === Number(employment.id)"
-                        type="radio" >
-                    <label  :for="'emp'+employment.id+'_'+index"  class="radio-label">{{ employment.title }}</label>
+            <div class="booking-choice">
+                <label class="booking-choice__label" for="employment-select">
+                    <span class="booking-choice__number">1</span>
+                    <span>{{$t('select_emp')}}</span>
+                </label>
+                <div class="booking-select">
+                    <select
+                        id="employment-select"
+                        v-model="selectedEmploymentId"
+                        @change="emplChange"
+                    >
+                        <option value="" disabled>{{$t('choose_session')}}</option>
+                        <option
+                            v-for="employment in employmentList"
+                            :key="employment.id"
+                            :value="String(employment.id)"
+                        >
+                            {{ employment.title }}
+                        </option>
+                    </select>
+                    <span class="booking-select__icon" aria-hidden="true"></span>
                 </div>
-
+                <p v-if="selectedEmployment" class="booking-choice__summary">
+                    {{ selectedEmployment.title }} · {{ selectedEmployment.price }} грн
+                </p>
             </div>
-            <div class="title-h3" style="margin-bottom: 0.5rem;margin-top: 0.5rem;">{{$t('ten_opt')}}</div>
-            <div class='radio_employments tennis_options'  v-if="employment_id&&$store.state.employments[employment_id].tennis_options">
 
-                <div class="tennis-option-row" v-for="(tennis_option,key,index) in $store.state.employments[employment_id].tennis_options" :key="key">
+            <div v-if="route === 'utc' && priceChoices.length > 1" class="booking-choice">
+                <label class="booking-choice__label" for="duration-price-select">
+                    <span class="booking-choice__number">2</span>
+                    <span>{{$t('duration_price')}}</span>
+                </label>
+                <div class="booking-select">
+                    <select
+                        id="duration-price-select"
+                        v-model="employmentPriceId"
+                        @change="priceChoiceChange"
+                    >
+                        <option
+                            v-for="choice in priceChoices"
+                            :key="choice.id"
+                            :value="String(choice.id)"
+                        >
+                            {{ priceChoiceLabel(choice) }}
+                        </option>
+                    </select>
+                    <span class="booking-select__icon" aria-hidden="true"></span>
+                </div>
+            </div>
+
+            <div v-if="route === 'utc' && selectedEmployment" class="booking-choice">
+                <label class="booking-choice__label" for="trainer-select">
+                    <span class="booking-choice__number">{{ priceChoices.length > 1 ? 3 : 2 }}</span>
+                    <span>{{$t('trainer')}}</span>
+                </label>
+                <div class="booking-select">
+                    <select
+                        id="trainer-select"
+                        v-model="selectedTrainerId"
+                        @change="trainerChange"
+                    >
+                        <option value="">{{$t('without_trainer')}}</option>
+                        <option
+                            v-for="trainer in trainers"
+                            :key="trainer.id"
+                            :value="String(trainer.id)"
+                        >
+                            {{ trainerLabel(trainer) }}
+                        </option>
+                    </select>
+                    <span class="booking-select__icon" aria-hidden="true"></span>
+                </div>
+            </div>
+
+            <div
+                v-if="selectedEmployment && Object.keys(optionDefinitions).length"
+                class="title-h3"
+                style="margin-bottom: 0.5rem;margin-top: 1.25rem;"
+            >{{$t('ten_opt')}}</div>
+            <div class='radio_employments tennis_options' v-if="selectedEmployment && Object.keys(optionDefinitions).length">
+
+                <div class="tennis-option-row" v-for="(tennis_option,key,index) in optionDefinitions" :key="key">
                     <div class="checkbox-agree js_valid_checkbox input-container pass" style="max-width: inherit;">
                         <input type="checkbox"
                                v-model="tennis_option_arr"
@@ -79,6 +146,9 @@ export default {
         return{
             tennis_option_arr:[],
             tennis_option_quantities:{},
+            selectedEmploymentId:'',
+            employmentPriceId:'default',
+            selectedTrainerId:'',
             disabled:true,
             isLoading: false,
             fullPage: false,
@@ -88,10 +158,42 @@ export default {
         ...mapState({
             phone: (state) => state.phone,
             employments: (state) => state.employments,
+            trainers: (state) => state.trainers,
             employment_id: (state) => state.employment_id,
+            employment_price_id: (state) => state.employment_price_id,
+            trainer_id: (state) => state.trainer_id,
             tennis_options: (state) => state.tennis_options,
+            tennis_options_catalog: (state) => state.tennis_options_catalog,
             route: (state) => state.route,
         }),
+        employmentList(){
+            return Object.values(this.employments || {});
+        },
+        selectedEmployment(){
+            return this.selectedEmploymentId
+                ? this.employments[this.selectedEmploymentId] || null
+                : null;
+        },
+        priceChoices(){
+            return this.selectedEmployment?.price_choices || [];
+        },
+        optionDefinitions(){
+            if (this.route === 'utc') {
+                return this.tennis_options_catalog || {};
+            }
+
+            return this.selectedEmployment?.tennis_options || {};
+        },
+        selectedPrice(){
+            return this.priceChoices.find(
+                choice => String(choice.id) === String(this.employmentPriceId)
+            ) || this.priceChoices[0] || null;
+        },
+        selectedTrainer(){
+            return this.trainers.find(
+                trainer => String(trainer.id) === String(this.selectedTrainerId)
+            ) || null;
+        },
     },
     mounted(){
         this.restoreOptions();
@@ -113,12 +215,54 @@ export default {
             }
 
         },
-        emplChange(employment_id){
+        emplChange(){
             this.disabled=false;
             this.tennis_option_arr=[];
             this.tennis_option_quantities={};
-            this.$store.commit('employmentOrderSet',employment_id);
+            this.employmentPriceId='default';
+            this.selectedTrainerId='';
+            this.$store.commit('employmentOrderSet',this.selectedEmploymentId);
+            this.$store.commit('employmentPriceOrderSet', {
+                id: this.employmentPriceId,
+                label: this.selectedPrice ? this.priceChoiceLabel(this.selectedPrice) : '',
+            });
+            this.$store.commit('trainerOrderSet', {id: null, title: '', price: 0});
+            this.$store.commit('durationOrderSet', null);
             this.$store.commit('tennis_optionsOrderSet', []);
+        },
+
+        priceChoiceChange(){
+            this.$store.commit('employmentPriceOrderSet', {
+                id: this.employmentPriceId,
+                label: this.selectedPrice ? this.priceChoiceLabel(this.selectedPrice) : '',
+            });
+            this.$store.commit(
+                'durationOrderSet',
+                this.selectedPrice?.minutes ? Number(this.selectedPrice.minutes) : null
+            );
+        },
+        trainerChange(){
+            this.$store.commit('trainerOrderSet', {
+                id: this.selectedTrainer ? this.selectedTrainer.id : null,
+                title: this.selectedTrainer ? this.selectedTrainer.name : '',
+                price: this.selectedTrainer ? this.trainerPrice(this.selectedTrainer) : 0,
+            });
+        },
+        priceChoiceLabel(choice){
+            if (!choice?.minutes) {
+                return this.$t('base_hourly_price', {price: choice?.price || 0});
+            }
+
+            return this.$t('duration_price_option', {
+                minutes: choice.minutes,
+                price: choice.price,
+            });
+        },
+        trainerLabel(trainer){
+            return `${trainer.name} · +${this.trainerPrice(trainer)} грн/год`;
+        },
+        trainerPrice(trainer){
+            return Number(trainer.tariffs?.[this.selectedEmploymentId] ?? 0);
         },
 
         tennis_optionChange(key){
@@ -162,7 +306,7 @@ export default {
                 return;
             }
 
-            const definitions = this.$store.state.employments[this.employment_id]?.tennis_options || {};
+            const definitions = this.optionDefinitions;
             const selected = {};
             this.tennis_option_arr.forEach((key) => {
                 selected[key] = definitions[key]?.isPerPiece
@@ -172,6 +316,15 @@ export default {
             this.$store.commit('tennis_optionsOrderSet', selected);
         },
         restoreOptions(){
+            this.selectedEmploymentId = this.employment_id
+                ? String(this.employment_id)
+                : '';
+            this.employmentPriceId = this.employment_price_id
+                ? String(this.employment_price_id)
+                : 'default';
+            this.selectedTrainerId = this.trainer_id
+                ? String(this.trainer_id)
+                : '';
             this.disabled = !this.employment_id;
 
             if (Array.isArray(this.tennis_options)) {
@@ -195,6 +348,87 @@ export default {
 </script>
 
 <style scoped>
+.booking-choice {
+    margin-bottom: 18px;
+    padding: 16px;
+    border: 1px solid rgba(38, 56, 82, .12);
+    border-radius: 16px;
+    background: linear-gradient(145deg, #fff 0%, #f8fafc 100%);
+    box-shadow: 0 8px 24px rgba(38, 56, 82, .06);
+}
+
+.booking-choice__label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    color: #17221b;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.booking-choice__number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    border-radius: 50%;
+    background: #f58220;
+    color: #fff;
+    font-size: 14px;
+    box-shadow: 0 4px 10px rgba(245, 130, 32, .25);
+}
+
+.booking-select {
+    position: relative;
+}
+
+.booking-select select {
+    width: 100%;
+    min-height: 52px;
+    padding: 0 48px 0 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    outline: none;
+    background: #fff;
+    color: #17221b;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.3;
+    cursor: pointer;
+    appearance: none;
+    transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.booking-select select:hover {
+    border-color: #f58220;
+}
+
+.booking-select select:focus-visible {
+    border-color: #f58220;
+    box-shadow: 0 0 0 4px rgba(245, 130, 32, .14);
+}
+
+.booking-select__icon {
+    position: absolute;
+    top: 50%;
+    right: 18px;
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid #667085;
+    border-bottom: 2px solid #667085;
+    pointer-events: none;
+    transform: translateY(-70%) rotate(45deg);
+}
+
+.booking-choice__summary {
+    margin: 9px 2px 0;
+    color: #667085;
+    font-size: 14px;
+}
+
 .tennis-option-row {
     display: flex;
     align-items: center;

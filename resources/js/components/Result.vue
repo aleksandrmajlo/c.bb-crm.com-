@@ -18,7 +18,34 @@
                                     <li class="item main-item">
                                         <span class="js_day_item title-h3">{{ tableTitle(order) }}</span><br>
                                         <span class="js_day_item">{{ dateTitle(order) }} · {{ order.time.text }}</span>
-                                        <span class="time">{{ dateDay(order) }} · 1:00 {{$t('hours')}}</span>
+                                        <span class="time">{{ dateDay(order) }} · {{ durationLabel(order) }}</span>
+                                        <span v-if="order.employment_title" class="order-detail">
+                                            {{ order.employment_title }}
+                                        </span>
+                                        <span v-if="order.employment_price_label" class="order-detail">
+                                            {{ order.employment_price_label }}
+                                        </span>
+                                        <span v-if="order.trainer_id" class="order-detail">
+                                            {{$t('trainer')}}: {{ order.trainer_title }} —
+                                            {{ money(order.trainer_price) }} грн/год
+                                            <template v-if="order.price_breakdown">
+                                                · {{ money(order.price_breakdown.trainer_price) }} грн
+                                            </template>
+                                        </span>
+                                        <span
+                                            v-for="option in optionDetails(order)"
+                                            :key="`${order.uniqueString}-${option.key || option.id}`"
+                                            class="order-detail order-detail--option"
+                                        >
+                                            {{$t('ten_opt')}}: {{ option.title }}
+                                            <template v-if="Number(option.quantity) > 1">× {{ option.quantity }}</template>
+                                            <template v-if="option.total !== null && option.total !== undefined">
+                                                — {{ money(option.total) }} грн
+                                            </template>
+                                            <template v-else>
+                                                — {{ money(option.unit_price) }} грн/год
+                                            </template>
+                                        </span>
                                     </li>
                                 </ul>
                             </div>
@@ -69,6 +96,7 @@ export default {
 
             orders: (state) => state.orders,
             tables: (state) => state.tables,
+            tennis_options_catalog: (state) => state.tennis_options_catalog,
 
             date_booking: (state) => state.date_booking,
             week: (state) => state.week,
@@ -93,6 +121,46 @@ export default {
         },
         dateDay(order) {
             return order.date_day || this.week[order.date]?.day || '';
+        },
+        durationLabel(order) {
+            const start = Number(order.time?.start || 0);
+            const end = Number(order.time?.end || 0);
+            const minutes = Math.max(0, Math.round((end - start) * 60));
+
+            return `${minutes} хв`;
+        },
+        money(value) {
+            return Number(value || 0).toLocaleString('uk-UA', {
+                maximumFractionDigits: 2,
+            });
+        },
+        optionDetails(order) {
+            if (Array.isArray(order.option_details) && order.option_details.length) {
+                return order.option_details;
+            }
+
+            const selection = order.tennis_options || {};
+            const quantities = {};
+            if (Array.isArray(selection)) {
+                selection.forEach((key) => {
+                    quantities[String(key)] = (quantities[String(key)] || 0) + 1;
+                });
+            } else {
+                Object.entries(selection).forEach(([key, quantity]) => {
+                    quantities[String(key)] = Number(quantity || 1);
+                });
+            }
+
+            return Object.entries(quantities).map(([key, quantity]) => {
+                const option = this.tennis_options_catalog[key] || {};
+                return {
+                    key,
+                    title: option.title || key,
+                    quantity,
+                    unit_price: Number(option.price || 0),
+                    total: null,
+                };
+            });
         },
         removeOrder(booking_id){
             Swal.fire({
@@ -131,3 +199,16 @@ export default {
     }
 }
 </script>
+
+<style scoped>
+.order-detail {
+    display: block;
+    margin-top: 4px;
+    color: #667085;
+    font-size: 14px;
+}
+
+.order-detail--option {
+    color: #344054;
+}
+</style>

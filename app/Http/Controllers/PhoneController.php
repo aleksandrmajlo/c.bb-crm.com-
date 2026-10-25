@@ -15,7 +15,13 @@ class PhoneController extends Controller
 
           $digits = 6;
           $random_number = rand(pow(10, $digits - 1), pow(10, $digits) - 1);
-          if (app()->environment('local')) {
+          if (env('APP_NAME') == 'Laravel_test') {
+              $random_number = 111111;
+              $id_sms = 'local-' . Str::uuid();
+          } elseif (app()->environment('local')) {
+              $random_number = 111111;
+              $id_sms = 'local-' . Str::uuid();
+          } elseif (str_ends_with((string) parse_url(config('app.url'), PHP_URL_HOST), '.local')) {
               $random_number = 111111;
               $id_sms = 'local-' . Str::uuid();
           } else {

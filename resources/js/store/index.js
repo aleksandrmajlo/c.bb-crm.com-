@@ -3,6 +3,23 @@ import { createStore, createLogger } from 'vuex';
 const debug = process.env.NODE_ENV !== 'production'
 // const debug = false;
 
+const timeValueToMinutes = (value) => {
+    if (typeof value === 'string' && value.includes(':')) {
+        const [hours, minutes = 0] = value.split(':').map(Number);
+        return (hours * 60) + minutes;
+    }
+
+    return Math.round(Number(value || 0) * 60);
+};
+
+const formatTime = (value) => {
+    const totalMinutes = timeValueToMinutes(value);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+
 export default createStore({
     state () {
         return {
@@ -33,6 +50,8 @@ export default createStore({
 
           tables:[],
           employments:[],
+          trainers:[],
+          tennis_options_catalog:{},
           times:[],
 
           date_booking:null,// date active
@@ -40,6 +59,9 @@ export default createStore({
 
     
           employment_id:null,
+          employment_price_id:'default',
+          trainer_id:null,
+          trainer_price:0,
           tennis_options:[],
           orders:[],
           total:0,
@@ -108,6 +130,8 @@ export default createStore({
             state.date_booking=datas.date_booking;
             state.tables=datas.tables;
             state.employments=datas.employments;
+            state.trainers=datas.trainers || [];
+            state.tennis_options_catalog=datas.tennis_options || {};
             state.times=datas.times;
 
         },
@@ -116,15 +140,44 @@ export default createStore({
             const uniqueString = Date.now().toString(36) + Math.random().toString(36).substring(2);
             const table = state.tables[datas.table_id];
             const bookingDate = state.week[state.date_booking];
+            const employment = state.employments[datas.employment_id];
+            const primaryOrder = state.orders.find(order => order.primary);
+            const hasTrainerOverride = Object.prototype.hasOwnProperty.call(datas, 'trainer_id');
+            const trainerId = hasTrainerOverride ? (datas.trainer_id || null) : state.trainer_id;
+            const trainer = state.trainers.find(item => String(item.id) === String(trainerId));
+            const trainerPrice = Object.prototype.hasOwnProperty.call(datas, 'trainer_price')
+                ? Number(datas.trainer_price || 0)
+                : Number(trainer?.tariffs?.[datas.employment_id] ?? state.trainer_price ?? 0);
+            const selectedPrice = employment?.price_choices?.find(
+                price => String(price.id) === String(state.employment_price_id)
+            );
+            const durationMinutes = Number(selectedPrice?.minutes || 0);
+            const end = durationMinutes
+                ? (timeValueToMinutes(datas.time.start) + durationMinutes) / 60
+                : datas.time.end;
+            const orderTime = {
+                ...datas.time,
+                end,
+                text: `${formatTime(datas.time.start)} - ${formatTime(end)}`,
+            };
             state.orders.push({
               date:state.date_booking,
               date_title:bookingDate ? bookingDate.title : state.date_booking,
               date_day:bookingDate ? bookingDate.day : '',
-              time:datas.time,
+              time:orderTime,
+              slot_end:datas.time.end,
               table_id:datas.table_id,
               table_title:table ? table.title : '',
               employment_id:datas.employment_id,
+              employment_title:employment ? employment.title : '',
+              employment_price_id:state.employment_price_id,
+              employment_price_label:primaryOrder?.employment_price_label || '',
+              trainer_id:trainerId,
+              trainer_title:datas.trainer_title || trainer?.name || '',
+              trainer_price:trainerPrice,
               tennis_options:datas.tennis_options,
+              option_details:[],
+              price_breakdown:null,
               primary:datas.primary,
               booking_id:datas.booking_id,
               uniqueString:uniqueString,
@@ -150,9 +203,48 @@ export default createStore({
 
        employmentOrderSet(state,employment_id){
         state.employment_id=employment_id;
+        const employment = state.employments[employment_id];
         state.orders.forEach((el,index )=> {
             state.orders[index].employment_id=employment_id;
+            state.orders[index].employment_title=employment ? employment.title : '';
          });
+       },
+
+       employmentPriceOrderSet(state,datas){
+           state.employment_price_id=datas.id;
+           state.orders.forEach((el,index) => {
+               state.orders[index].employment_price_id=datas.id;
+               state.orders[index].employment_price_label=datas.label || '';
+           });
+       },
+
+       trainerOrderSet(state,datas){
+           state.trainer_id=datas.id || null;
+           state.trainer_price=Number(datas.price || 0);
+           state.orders.forEach((el,index) => {
+               state.orders[index].trainer_id=datas.id || null;
+               state.orders[index].trainer_title=datas.title || '';
+               state.orders[index].trainer_price=Number(datas.price || 0);
+           });
+       },
+
+       durationOrderSet(state,minutes){
+           state.orders.forEach((order,index) => {
+               const startMinutes = timeValueToMinutes(order.time.start);
+               const fallbackEnd = order.slot_end === undefined
+                   ? order.time.end
+                   : order.slot_end;
+               const endMinutes = minutes
+                   ? startMinutes + Number(minutes)
+                   : timeValueToMinutes(fallbackEnd);
+               const end = endMinutes / 60;
+
+               state.orders[index].time = {
+                   ...order.time,
+                   end,
+                   text: `${formatTime(order.time.start)} - ${formatTime(end)}`,
+               };
+           });
        },
 
 
@@ -164,8 +256,26 @@ export default createStore({
        },
 
 
-       totalSet(state,total){
-          state.total=total;
+       totalSet(state,data){
+          if (!data || typeof data !== 'object') {
+              state.total=data;
+              return;
+          }
+
+          state.total=data.total || 0;
+          Object.entries(data.orders || {}).forEach(([key, details]) => {
+              const order = state.orders.find(item => String(item.uniqueString) === String(key));
+              if (!order) {
+                  return;
+              }
+
+              order.price_breakdown=details;
+              order.option_details=details.option_details || [];
+              order.trainer_price=Number(details.trainer_unit_price || 0);
+              if (details.trainer_name) {
+                  order.trainer_title=details.trainer_name;
+              }
+          });
        },
 
        table_dop_idSet(state,table_dop_id){
@@ -229,6 +339,9 @@ export default createStore({
         state.date_booking=null;
         state.orders=[];
         state.employment_id=null;
+        state.employment_price_id='default';
+        state.trainer_id=null;
+        state.trainer_price=0;
         state.tennis_options=[];
         state.total=0;
         state.table_dop_id=null;
@@ -331,7 +444,7 @@ export default createStore({
                     }
                 )
                 .then(response => {
-                    commit('totalSet', response.data.total);
+                    commit('totalSet', response.data);
                 })
                 .catch(error => {})
                 .then(()=>{
