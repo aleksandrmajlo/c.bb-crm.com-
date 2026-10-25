@@ -92,7 +92,12 @@ flock -n 9 || fail "another deployment is already running"
 
 trap cleanup EXIT
 
-install -d -m 0750 -o root -g root "${PREPARED_ROOT}" "${BACKUP_ROOT}"
+# Composer runs as bb_crm, so it needs execute (directory traversal) access
+# to PREPARED_ROOT. GitHub's deploy user still has no access to this directory.
+install -d -m 0750 -o root -g "${APP_GROUP}" "${PREPARED_ROOT}"
+
+# Rollback snapshots may contain application code and remain root-only.
+install -d -m 0750 -o root -g root "${BACKUP_ROOT}"
 prepared_dir="$(mktemp -d "${PREPARED_ROOT}/${release_id}.XXXXXX")"
 
 log "Preparing release ${release_id}"
