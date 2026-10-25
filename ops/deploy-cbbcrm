@@ -42,7 +42,7 @@ run_artisan() {
 restore_backup() {
     local backup_dir="$1"
 
-    log "Health check failed; restoring ${backup_dir}"
+    log "Restoring previous code from ${backup_dir}"
     rsync -a --delete --delay-updates --safe-links \
         --chown="${APP_USER}:${APP_GROUP}" \
         --exclude='.env' \
@@ -51,14 +51,23 @@ restore_backup() {
         --exclude='public/storage' \
         "${backup_dir}/" "${LIVE_DIR}/"
 
-    run_artisan optimize:clear
-    run_artisan package:discover
-    run_artisan config:cache
-    run_artisan view:cache
+    refresh_caches
+}
+
+clear_bootstrap_cache() {
+    # The previous package manifest can reference dev-only providers such as
+    # Laravel Debugbar. It must be removed before Artisan boots with --no-dev
+    # dependencies. Runtime data in storage is not touched.
+    find "${LIVE_DIR}/bootstrap/cache" \
+        -maxdepth 1 \
+        -type f \
+        -name '*.php' \
+        -delete
 }
 
 refresh_caches() {
-    run_artisan optimize:clear \
+    clear_bootstrap_cache \
+        && run_artisan optimize:clear \
         && run_artisan package:discover \
         && run_artisan config:cache \
         && run_artisan view:cache
@@ -66,7 +75,7 @@ refresh_caches() {
 
 [[ "${EUID}" -eq 0 ]] || fail "run this command through sudo"
 
-for command in flock rsync runuser curl; do
+for command in flock rsync runuser curl find; do
     command -v "${command}" >/dev/null 2>&1 || fail "missing command: ${command}"
 done
 
