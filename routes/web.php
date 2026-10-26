@@ -53,5 +53,6 @@ Route::post('/api/addBooking', [App\Http\Controllers\ApiController::class, 'addB
 Route::post('/api/payBooking', [App\Http\Controllers\ApiController::class, 'payBooking']);
 Route::get('/api/bookings', [App\Http\Controllers\ApiController::class, 'bookings']);
 Route::post('/api/removeBooking', [App\Http\Controllers\ApiController::class, 'removeBooking']);
+Route::post('/api/updateBooking', [App\Http\Controllers\ApiController::class, 'updateBooking']);
 Route::post('/api/updateClearOrder', [App\Http\Controllers\ApiController::class, 'updateClearOrder']);
 Route::post('/api/getCheck', [App\Http\Controllers\ApiController::class, 'getCheck']);

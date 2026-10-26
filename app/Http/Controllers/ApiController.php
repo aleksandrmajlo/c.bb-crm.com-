@@ -136,6 +136,23 @@ class ApiController extends Controller
         return response()->json($res);
     }
 
+    public function updateBooking(Request $request)
+    {
+        $response = Http::withHeaders([
+            'API-Key' => config('app.api_key'),
+            'Accept' => 'application/json',
+        ])->post($this->apiUrl('api/updateBooking'), [
+            'route' => $request->route,
+            'phone' => $request->phone,
+            'booking_id' => $request->booking_id,
+            'order' => $request->order,
+        ]);
+
+        // Keep validation status codes from the CRM API so Vue can show the
+        // real reason (busy trainer, overlapping booking, paid order, etc.).
+        return response()->json($response->json(), $response->status());
+    }
+
     public function updateClearOrder(Request $request)
     {
         $route = $request->route;

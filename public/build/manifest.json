@@ -8,12 +8,12 @@
     "src": "node_modules/intl-tel-input/build/img/flags@2x.png"
   },
   "resources/js/app.js": {
-    "file": "assets/app-BDE027I5.js",
+    "file": "assets/app-NVmP3bz9.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "css": [
-      "assets/app-D2IfVrg3.css"
+      "assets/app-BjqqsNpJ.css"
     ],
     "assets": [
       "assets/flags-41zgeiS_.png",

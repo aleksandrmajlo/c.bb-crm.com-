@@ -201,6 +201,26 @@ export default createStore({
          });         
       },
 
+       replaceItemOrder(state, updatedOrder) {
+           const index = state.orders.findIndex(
+               order => String(order.booking_id) === String(updatedOrder.booking_id)
+           );
+           if (index === -1) {
+               return;
+           }
+
+           // The API returns only fields that are allowed to change. Preserve
+           // the original court, date, start slot and browser-only identifiers.
+           state.orders[index] = {
+               ...state.orders[index],
+               ...updatedOrder,
+               time: {
+                   ...state.orders[index].time,
+                   ...(updatedOrder.time || {}),
+               },
+           };
+       },
+
        employmentOrderSet(state,employment_id){
         state.employment_id=employment_id;
         const employment = state.employments[employment_id];
@@ -612,6 +632,53 @@ export default createStore({
                             commit('isAiaxSet',false);
                         });
              
+         },
+
+         async previewBookingEdit({state}, order) {
+             const response = await axios.post(
+                 state.apiUrl + "api/getTotalBookings",
+                 {
+                     route: state.route,
+                     orders: [order],
+                 },
+                 {
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'API-Key': state.apiKey,
+                     },
+                 }
+             );
+
+             return response.data?.orders?.[order.uniqueString] || null;
+         },
+
+         async updateBooking({commit, state, dispatch}, order) {
+             commit('isAiaxSet', true);
+             try {
+                 const response = await axios.post(
+                     state.apiUrl + "api/updateBooking",
+                     {
+                         route: state.route,
+                         phone: state.phone,
+                         booking_id: order.booking_id,
+                         order,
+                     },
+                     {
+                         headers: {
+                             'Content-Type': 'application/json',
+                             'API-Key': state.apiKey,
+                         },
+                     }
+                 );
+
+                 // Keep the translated labels prepared by the browser, but let
+                 // every authoritative price and id from the API win.
+                 commit('replaceItemOrder', {...order, ...response.data.order});
+                 await dispatch('getTotalBookings');
+                 return response.data.order;
+             } finally {
+                 commit('isAiaxSet', false);
+             }
          },
 
         /*

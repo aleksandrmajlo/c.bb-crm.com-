@@ -9,9 +9,27 @@
             <div class="wrapOrders">
                 <template v-for="(order,index) in orders" :key="index">
                     <div class="itemOrder">
-                        <a  class="removeOrder" href="#" @click.prevent="removeOrder(order.booking_id)">
-                            <i class="fas fa-trash"></i>
-                        </a>
+                        <div class="order-actions">
+                            <button
+                                v-if="route === 'utc' && order.booking_id"
+                                type="button"
+                                class="order-action order-action--edit"
+                                :title="$t('edit_booking')"
+                                :aria-label="$t('edit_booking')"
+                                @click="editingOrder = order"
+                            >
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            <button
+                                type="button"
+                                class="order-action order-action--remove"
+                                :title="$t('delete')"
+                                :aria-label="$t('delete')"
+                                @click="removeOrder(order.booking_id)"
+                            >
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                         <div class="flex-row">
                             <div class="left">
                                 <ul class="list js_cart_list">
@@ -66,6 +84,12 @@
                 <a href="#" @click.prevent="back" >{{$t('back')}}</a>
             </div>
         </div>
+        <order-edit-modal
+            v-if="editingOrder"
+            :order="editingOrder"
+            @close="editingOrder = null"
+            @saved="orderSaved"
+        />
     </div>
 </template>
 
@@ -75,10 +99,11 @@ import Loading from 'vue-loading-overlay';
 import 'vue-loading-overlay/dist/css/index.css';
 import Swal from 'sweetalert2'
 import InfoResult from './InfoResult.vue';
+import OrderEditModal from './OrderEditModal.vue';
 
 export default {
     name: "Result",
-    components: {Loading, InfoResult},
+    components: {Loading, InfoResult, OrderEditModal},
     data() {
         return {
             isLoading: false,
@@ -86,6 +111,7 @@ export default {
 
             ifTotal: false,
             disabled_rasch: true,
+            editingOrder: null,
 
         }
     },
@@ -104,6 +130,7 @@ export default {
             times: (state) => state.times,
 
             total: (state) => state.total,
+            route: (state) => state.route,
         }),
         ...mapGetters([
             'isValidOrder',
@@ -187,6 +214,15 @@ export default {
             })
 
         },
+        orderSaved() {
+            this.$store.dispatch('getBokingsDops');
+            Swal.fire({
+                text: this.$t('booking_updated'),
+                icon: 'success',
+                timer: 1600,
+                showConfirmButton: false,
+            });
+        },
         getTotal() {
             this.isLoading = true;
             this.$store.dispatch('getTotalBookings').then(() => {
@@ -210,5 +246,48 @@ export default {
 
 .order-detail--option {
     color: #344054;
+}
+
+.itemOrder {
+    position: relative;
+}
+
+.order-actions {
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    display: flex;
+    gap: 7px;
+}
+
+.order-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: transform .15s ease, background .15s ease;
+}
+
+.order-action:hover {
+    transform: translateY(-1px);
+}
+
+.order-action--edit {
+    background: #eef9f1;
+    color: #269943;
+}
+
+.order-action--remove {
+    background: #fff1f2;
+    color: #e11d48;
+}
+
+.main-item {
+    padding-right: 88px;
 }
 </style>
