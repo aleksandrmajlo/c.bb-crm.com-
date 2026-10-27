@@ -207,7 +207,7 @@ export default {
             employments: state => state.employments,
             tables: state => state.tables,
             trainers: state => state.trainers,
-            optionDefinitions: state => state.tennis_options_catalog,
+            tennisOptionsCatalog: state => state.tennis_options_catalog,
         }),
         employmentList() {
             const all = Object.values(this.employments || {});
@@ -239,6 +239,18 @@ export default {
         },
         priceChoices() {
             return this.selectedEmployment?.price_choices || [];
+        },
+        optionDefinitions() {
+            if (
+                this.selectedEmployment
+                && Object.prototype.hasOwnProperty.call(this.selectedEmployment, 'tennis_options')
+            ) {
+                return this.selectedEmployment.tennis_options || {};
+            }
+
+            // Compatibility with an older API response that only contained a
+            // global option catalog and no per-employment option collection.
+            return this.tennisOptionsCatalog || {};
         },
         selectedPrice() {
             return this.priceChoices.find(
@@ -283,6 +295,8 @@ export default {
         employmentChanged() {
             this.employmentPriceId = 'default';
             this.selectedTrainerId = '';
+            this.selectedOptionKeys = [];
+            this.optionQuantities = {};
             this.selectionChanged();
         },
         selectionChanged() {

@@ -178,11 +178,16 @@ export default {
             return this.selectedEmployment?.price_choices || [];
         },
         optionDefinitions(){
-            if (this.route === 'utc') {
-                return this.tennis_options_catalog || {};
+            if (
+                this.selectedEmployment
+                && Object.prototype.hasOwnProperty.call(this.selectedEmployment, 'tennis_options')
+            ) {
+                return this.selectedEmployment.tennis_options || {};
             }
 
-            return this.selectedEmployment?.tennis_options || {};
+            // Compatibility with an older API response that only contained a
+            // global option catalog and no per-employment option collection.
+            return this.tennis_options_catalog || {};
         },
         selectedPrice(){
             return this.priceChoices.find(
