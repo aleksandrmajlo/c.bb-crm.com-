@@ -1,9 +1,11 @@
 /.phpunit.cache
 /node_modules
 /public/hot
+/public/pdf
 /public/storage
 /storage/*.key
 /vendor
+/shwal
 .env
 .env.backup
 .env.production

@@ -2,6 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 
+Route::get('/order-receipt/{tenant}/{orderId}', \App\Http\Controllers\OrderReceiptController::class)
+    ->where('tenant', '[A-Za-z0-9_-]+')->whereNumber('orderId')
+    ->middleware('throttle:60,1')->name('order-receipt');
+
 //use Illuminate\Support\Facades\Artisan;
 //Artisan::call('cache:clear');
 //Artisan::call('route:clear');
