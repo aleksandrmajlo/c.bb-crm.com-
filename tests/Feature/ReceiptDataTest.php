@@ -101,4 +101,54 @@ class ReceiptDataTest extends TestCase
             @unlink($databaseFile);
         }
     }
+
+    public function test_token_receipt_uses_shared_registry_and_keeps_old_links_working(): void
+    {
+        $tenant = 'receipt_test_'.bin2hex(random_bytes(6));
+        $databaseFile = base_path($tenant);
+        $originalMysql = config('database.connections.mysql');
+        $originalBillPay = config('database.connections.bill_pay');
+        $token = rtrim(strtr(base64_encode(random_bytes(24)), '+/', '-_'), '=');
+        $legacyUrl = URL::signedRoute('order-receipt', ['tenant' => $tenant, 'orderId' => 1], absolute: false);
+        parse_str((string) parse_url($legacyUrl, PHP_URL_QUERY), $legacyQuery);
+        DB::connection('receipt_test')->table('order_receipt_signatures')->insert(['order_id' => 1, 'signature_hash' => hash('sha256', $legacyQuery['signature'])]);
+        DB::connection('receipt_test')->statement("VACUUM INTO '".$databaseFile."'");
+        config([
+            'database.connections.mysql' => ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => ''],
+            'database.connections.bill_pay' => ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => ''],
+        ]);
+        DB::purge('mysql');
+        DB::purge('bill_pay');
+        $schema = Schema::connection('bill_pay');
+        $schema->create('billiards', function (Blueprint $t) { $t->id(); $t->string('idd'); });
+        $schema->create('order_receipt_links', function (Blueprint $t) { $t->id(); $t->unsignedBigInteger('billiard_id'); $t->unsignedBigInteger('order_id'); $t->char('token_hash', 64)->unique(); });
+        DB::connection('bill_pay')->table('billiards')->insert(['id' => 14, 'idd' => $tenant]);
+        DB::connection('bill_pay')->table('order_receipt_links')->insert(['billiard_id' => 14, 'order_id' => 1, 'token_hash' => hash('sha256', $token)]);
+
+        try {
+            $url = '/order-receipt/'.$token;
+            $response = $this->get($url)->assertOk()->assertSee('Намотка')->assertSee('142.50 грн')->assertDontSee($tenant);
+            $response->assertHeader('Cache-Control', 'no-store, private');
+            $this->get('/order-receipt/'.str_repeat('A', 32))->assertForbidden();
+            $this->get($url.'?unexpected=1')->assertForbidden();
+            $this->get($url.'?download=other')->assertForbidden();
+            $this->get($legacyUrl)->assertOk()->assertSee('Намотка');
+
+            preg_match('/href="([^" ]*download=pdf[^" ]*)"/', $response->getContent(), $matches);
+            $this->assertArrayHasKey(1, $matches);
+            $pdfUrl = html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $pdf = $this->get($pdfUrl)->assertOk()->assertHeader('content-type', 'application/pdf');
+            $this->assertStringStartsWith('%PDF-', $pdf->getContent());
+            $this->assertSame(':memory:', config('database.connections.mysql.database'));
+            $this->assertNull(config('database.connections.order_receipt'));
+
+            DB::connection('bill_pay')->table('order_receipt_links')->delete();
+            $this->get($url)->assertForbidden();
+        } finally {
+            DB::purge('mysql');
+            DB::purge('bill_pay');
+            config(['database.connections.mysql' => $originalMysql, 'database.connections.bill_pay' => $originalBillPay]);
+            @unlink($databaseFile);
+        }
+    }
 }
