@@ -1,7 +1,7 @@
 <section class="receipt-summary">
-    @if($cashboxName)
+    {{-- @if($cashboxName)
         <div class="summary-row"><span>Спосіб оплати</span><span>{{ $cashboxName }}</span></div>
-    @endif
+    @endif --}}
     <div class="summary-row total"><span>Сума замовлення</span><span>{{ number_format($amount, 2, '.', ' ') }} {{ $currency }}</span></div>
 </section>
 <footer class="receipt-footer">
